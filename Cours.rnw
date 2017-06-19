@@ -1,0 +1,512 @@
+\documentclass{beamer}
+
+\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\input{pream.tex}
+
+%--------------------------------------------------------------------
+\title[Stat \& Eco]{Statistique pour l'écologie}
+
+\author[MP Etienne]{Marie-Pierre  Etienne}
+\institute[AgroParisTech  /   INRA]{   UMR MIA-Paris, AgroParisTech, INRA, Université Paris-Saclay
+
+  \bigskip
+  \begin{tabular}{cccc}
+    \includegraphics[ height=1cm]{logagrotech_ABL_RVB}& 
+    \hspace{.5cm} &
+    \includegraphics[height=1cm]{logotype-INRA-RVB} & 
+  \end{tabular} \\ 
+  \bigskip
+  }
+
+\date[22 juin 2017]{Rouen - GIP Seine Aval - juin 2017}
+
+%--------------------------------------------------------------------
+
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+\AtBeginSubsection[]
+{
+   \begin{frame}
+        \frametitle{Plan}
+        \tableofcontents[currentsection,currentsubsection]
+   \end{frame}
+}
+
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+
+\begin{document}
+%--------------------------------------------------------------------
+%--------------------------------------------------------------------
+
+<<echo=FALSE, results='hide'>>=
+opts_chunk$set(size='footnotesize') 
+library('car')
+library('ggplot2')
+mainDir <- '/home/metienne/EnCours/2017-CoursRouen'
+dataDir <- file.path(mainDir, 'Data')
+@
+
+
+
+%--------------------------------------------------------------------
+\frame{\titlepage
+  }
+
+% %--------------------------------------------------------------------
+
+\section{Démarche statistique}
+% \input{DemarcheStat.tex}
+\begin{frame}
+\frametitle{Un exemple introductif}
+  \begin{block}{Question biologique}
+Les mâles et les femelles chacals ont-ils les mêmes dimensions craniennes ?
+\end{block}
+\pause
+\begin{block}{Expérience}
+Choisir au hasard 10 crânes de chacals mâles et 10 crânes de chacals et les mesurer. ({\it Statistique})
+\end{block}
+\pause
+\begin{block}{Analyse}
+\hspace{1cm} \textcolor{darkorange}{Statistique}
+\end{block}
+\pause
+\begin{block}{Réponse}
+\hspace{1cm} \textcolor{darkorange}{Ecologie}
+\end{block}
+\end{frame}
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]
+\frametitle{Comparaison des mâles et des femelles}
+<<chacals1>>=
+chacals <- read.table(file.path(dataDir,'chacals.csv'), 
+                                skip=1, ## on passe les com
+                                sep=',', ## colonnes séparées par une ,
+                                header=TRUE ## la premiere ligne lue nomme les var
+                                )
+chacals$sexe <- as.factor(chacals$sexe )
+head(chacals)
+@
+\end{frame}
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]
+\frametitle{Comparaison des mâles et des femelles}
+<<chacals2, fig.show='hide', echo=FALSE>>=
+p <- ggplot(data=chacals, aes(sexe,taille)) + geom_boxplot()
+(p)
+p <- ggplot(data=chacals, aes(taille, fill = sexe, colour = sexe)) +
+  geom_density(alpha = 0.1, bw=1.5) + geom_point(aes(x = taille, y=0, alpha=0)) + xlim(90, 130)
+(p)
+p <- ggplot(data=chacals, aes(taille, fill = sexe, colour = sexe)) +
+  geom_density(alpha = 0.1, bw=2) + geom_point(aes(x = taille, y=0, alpha=0)) + xlim(90, 130)
+(p)
+@
+\only<1>{
+\begin{figure}
+\includegraphics[scale=0.45]{figure/chacals2-1}
+\end{figure}}
+\only<2>{
+\begin{figure}
+\includegraphics[scale=0.45]{figure/chacals2-2}
+\end{figure}}
+\only<3>{
+\begin{figure}
+\includegraphics[scale=0.45]{figure/chacals2-3}
+\end{figure}}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{De la question biologique à la question statistique}
+\begin{block}{Question biologique}
+Les mâles et les femelles chacals ont-ils les mêmes dimensions crâniennes ?
+\end{block}
+\pause
+\begin{block}{Question biologique reformulée}
+La taille standard d'un crâne de chacals mâles est-elle la même que la taille standard d'un crâne de chacal femelle ?
+\end{block}
+\pause
+Il faut
+\begin{enumerate}
+\item un modèle qui définit un 'standard' potentiellement différent pour les mâles et les femelles ({\it Modélisation}),
+\item une méthode pour quantifier le standard de la population à partir des 20 chacals observés ({\it Estimation}),
+\item une méthode pour décider si la différence est bien réelle ({\it Tests})
+\end{enumerate}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Modèle de comparaison de deux populations}
+Notons $Y^s_i$ la taille du crâne du chacal $i$ de sexe $s$.
+\medskip
+
+\textcolor{darkorange}{Resultats possibles :}  $(Y_1^F, Y_2^F, \ldots, Y_{n_F}^F, Y_1^M, \ldots, Y_{n_M}^M)$  avec $n_F$ le nombre de femelles, $n_M$ le nombre de mâles.
+{\it Ces quantités sont aléatoires car elles dépendent du choix des individus dans la population.}
+
+\textcolor{darkorange}{Observations :}  $(y_1^F, y_2^F, \ldots, y_{n_F}^F, y_1^M, \ldots, y_{n_M}^M)$  les mesures faites sur les $n_F+n_M$ chacals effectivement choisis.
+{\it Ces quantités sont fixes car ce sont les mesures faites sur les individus choisis.}
+
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Modélisation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Discussion sur les hypothèses}
+
+\begin{equation*}
+(M1): \quad Y^s_i \overset{i.i.d}{ \sim }\Ncal(\mu_s, \sigma^2)
+\end{equation*}
+
+\begin{block}{Indépendance}
+\only<2>{Il faut s'assurer que cette hypothèse est réaliste à partir du terrain ( attention prox spatial ou génétique)}
+\end{block}
+
+<<echo=FALSE, results='hide'>>=
+set.seed(1)
+mu_est <- by(chacals$taille, chacals$sexe, mean)
+lm1 <- lm(taille~sexe, data=chacals)
+sd_est <- mean(lm1$residuals^2)
+sd_plot <- sd_est *0.5
+@
+
+<<chacals3, echo=FALSE, fig.show='hide', results='hide', fig.height=6, fig.width=10>>=
+p1 <- ggplot(data = data.frame(x = c(90, 130)), aes(x)) +
+  stat_function(fun = dnorm, n = 101, args = list(mean = mu_est[1], sd = sd_plot), colour='red') +
+  stat_function(fun = dnorm, n = 101, args = list(mean = mu_est[2], sd = sd_plot), colour='blue') + ylab("") +
+  scale_y_continuous(breaks = NULL) +xlim(90,130)
+(p1)
+
+res <- replicate(10, sd_est*rnorm(2)+mu_est)
+dfsim  <- data.frame(taille=as.numeric(res), sexe=as.factor(rep(c(1,2), 10)))
+
+p1 <- p1 +  geom_point(data=dfsim, aes(x = taille, col=sexe, y=0))
+(p1)
+
+p1 <- p1+geom_density(data=dfsim, aes(taille, fill = sexe, colour = sexe), alpha = 0.1, bw=2)
+(p1)
+@
+\begin{block}{Normalité}
+\only<3-6>{
+Elle suppose que les tailles de crâne sont réparties selon une loi normale de moyenne $\muF$ pour les femelles et $\muM$ pour les mâles.
+\begin{figure}
+\includegraphics<4>[scale=0.25]{figure/chacals3-1.pdf}
+\includegraphics<5>[scale=0.25]{figure/chacals3-2.pdf}
+\includegraphics<6>[scale=0.25]{figure/chacals3-3.pdf}
+\end{figure}
+}
+\end{block}
+\begin{block}{Homoscédasticité}
+\only<7>{ = Même variance. Hypothèse cruciale pour la mise en oeuvre des tests statistiques dans ce cadre ({\it A vérifier a posteriori}).
+}
+\end{block}
+\end{frame}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Estimation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Que dire sur les paramètres populationnels ?}
+
+\textcolor{darkorange}{Modèle}
+\begin{equation*}
+(M1): \quad Y^s_i \overset{i.i.d}{ \sim }\Ncal(0, \sigma^2).
+\end{equation*}
+
+
+\textcolor{darkorange}{Observations :}  $(y_1^F, y_2^F, \ldots, y_{n_F}^F, y_1^M, \ldots, y_{n_M}^M)$.
+\medskip
+
+\begin{center}
+{
+\footnotesize
+\begin{tabular}{p{0.46\textwidth}|p{0.47\textwidth}}
+ Estimation & Estimateur  \\ \hline  
+ \vspace{0.2cm}$\textcolor{darkred}{\hat{\mu}_F} = \frac{1}{n_F} \sum_{i=1}^{n_F} y^F_{i} =\bar{y}^F,$& \vspace{0.2cm} $\textcolor{darkred}{M_F} = \frac{1}{n_F} \sum_{i=1}^{n_F} Y^F_{i} =\bar{Y}^F,$\\
+$\textcolor{darkblue}{\hat{\mu}_M} = \frac{1}{n_M} \sum_{i=1}^{n_M} y^M_{i}=\bar{y}^M,$& $\textcolor{darkblue}{{M}_M} = \frac{1}{n_M} \sum_{i=1}^{n_M} Y^M_{i}=\bar{Y}^M,$ \\
+$\hat{\sigma}^2 = \frac{1}{n-2} \sum_{s=1}^2 \sum_{i=1}^{n_F+n_M} \left( y^s_{i}-\bar{y}^s \right )^2.$& $S ^2 = \frac{1}{n-2} \sum_{s=1}^2 \sum_{i=1}^{n_F+n_M} \left( Y^s_{i}-\bar{Y}^s \right )^2$.\\
+\end{tabular}
+}
+\end{center}
+\pause
+
+\begin{align*}
+\textcolor{darkred}{{M}_F}-\textcolor{darkblue}{{M}_M}  &\sim\Ncal\left(\muF-\muM, \sigma^2\left( \frac{1}{n_F}+\frac{1}{n_M}\right)\right)\\ 
+\sqrt{ \frac{n_F\, n_M}{n_F+n_M}} \frac{(\textcolor{darkred}{{M}_F}-\textcolor{darkblue}{{M}_M}) - (\muF-\muM)}{\sqrt{\sigma^2}}&\sim \Ncal(0,1)\\ 
+\sqrt{ \frac{n_F\, n_M}{n_F+n_M}} \frac{(\textcolor{darkred}{{M}_F}-\textcolor{darkblue}{{M}_M}) - (\muF-\muM)}{\sqrt{S^2}}&\sim \Tcal(n_M+n_F-2)
+\end{align*}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Tests}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Test de comparaison de deux populations}
+
+\begin{block}{Question biologique}
+Les mâles et les femelles chacals ont-ils les mêmes dimensions craniennes ?
+\end{block}
+\pause
+\begin{block}{Question statistique}
+Le paramètre de taille standard des femelles $\muF$ est il égal au paramètre de taille standard des mâles $\muM$ ?
+\end{block}
+\pause
+Supposons que oui, c'est l'hypothèse $H_0$:
+$$H0 = \{  \muF=\muM\},$$
+\pause
+alors
+ $$ \sqrt{ \frac{n_F\, n_M}{n_F+n_M}} \frac{(\textcolor{darkred}{{M}_F}-\textcolor{darkblue}{{M}_M}) - \overbrace{(\muF-\muM)}^{=0}}{\sqrt{S^2}}\sim\Tcal(n-2)$$
+
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<<chacals4, results='hide', fig.show='hide', echo=FALSE,  fig.height=6, fig.width=10>>=
+m  <- diff(mu_est)
+sd_1 <- sd_est
+p0 <- ggplot(data = data.frame(x = c(-10, 10)), aes(x)) +
+  stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = sd_est*(1/10+1/10)), colour='#55FF00') + ylab("") +
+  scale_y_continuous(breaks = NULL) 
+(p0)
+p1 <- p0 +  stat_function(fun = dnorm, n = 101, args = list(mean = -1, sd = sd_est*(1/10+1/10)), colour='#99FF00')
+(p1)
+
+p1 <- p1 +  stat_function(fun = dnorm, n = 101, args = list(mean = -2.5, sd = sd_est*(1/10+1/10)), colour='#BBFF00') + stat_function(fun = dnorm, n = 101, args = list(mean = -5, sd = sd_est*(1/10+1/10)), colour='#DDFF00')
+(p1)
+
+p1 <- p1 +  stat_function(fun = dnorm, n = 101, args = list(mean = 1, sd = sd_est*(1/10+1/10)), colour='#33FF99') +  stat_function(fun = dnorm, n = 101, args = list(mean = 2.5, sd = sd_est*(1/10+1/10)), colour='#66CCCC') + stat_function(fun = dnorm, n = 101, args = list(mean = 5, sd = sd_est*(1/10+1/10)), colour='#333399')
+(p1)
+
+@
+
+\begin{frame}[fragile]{Loi de la statistique de test}
+Sous $H_0$:
+ $$ T=\sqrt{ \frac{n_F\, n_M}{n_F+n_M}} \frac{(\textcolor{darkred}{{M}_F}-\textcolor{darkblue}{{M}_M}) }{\sqrt{S^2}}\sim\Tcal(n-2)$$
+ \only<3->{sous $H_1$}
+\begin{figure}
+\includegraphics<2>[scale=0.3]{figure/chacals4-1}
+\includegraphics<3>[scale=0.3]{figure/chacals4-2}
+\includegraphics<4>[scale=0.3]{figure/chacals4-3}
+\includegraphics<5>[scale=0.3]{figure/chacals4-4}
+\end{figure}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+<<chacals5, echo=FALSE, results='hide', fig.show='hide', fig.height=6, fig.width=10, warning=FALSE>>=
+test <- t.test(taille~sexe, data=chacals)
+tobs <- round(test$statistic,3)
+df <- data.frame(x = seq(-10, 10, length.out=101), y=dnorm(seq(-10, 10, length.out=101), mean=0, sd=sd_est*(1/10+1/10)))
+p1 <- ggplot(data = df,  mapping = aes(x = x, y = y), colour='darkred')  +  geom_line(colour='darkred') + geom_area(mapping = aes(x = ifelse(x< -abs(tobs) , x, NA)), fill = "gray") + geom_point(x=tobs, y=0)
+(p1)
+
+p1 <- p1 +  geom_line(colour='darkred') + geom_area(mapping = aes(x = ifelse(x > abs(tobs) , x, NA)), fill = "gray") 
+(p1)
+@
+
+\begin{frame}[fragile]{Probabilité critique du test}
+A partir de l'échantillon, on a
+$$t_{obs}=\sqrt{ \frac{n_F\, n_M}{n_F+n_M}} \frac{(\textcolor{darkred}{\hat{\mu}_F}-\textcolor{darkblue}{\hat{\mu}_M}) }{\sqrt{\hat{\sigma}^2}}= \Sexpr{tobs}$$
+
+A quel point cette observation est crédible sous $H_0$ ?
+C'est la probabilité critique ({\it p-value}).
+
+% \only<2>{Cas unilatère - $H_1=\{\muF < \muM \} $, i.e  $\Pbb(T<t_{obs}) :$ }
+% \only<3>{Cas unilatère - $H_1=\{\muF=\muM\}$, i.e   $\Pbb(|T|<|t_{obs}|) :$ }
+\begin{figure}
+\includegraphics<2>[scale=0.25]{figure/chacals5-1.pdf}
+\includegraphics<3>[scale=0.25]{figure/chacals5-2.pdf}
+\end{figure}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+<<echo=FALSE, results='hide'>>=
+test.bil <- t.test(taille~sexe, data=chacals)
+test.uni <- t.test(taille~sexe, data=chacals, alternative =  "less" )
+tobs <- round(test.bil$statistic,3)
+@
+
+\begin{frame}[fragile]{Conclusion du test bilatère}
+\begin{block}{Probabilité critique}
+ $\Pbb(|T|>|\Sexpr{tobs}|)= \Sexpr{test.bil$p.value}$
+\end{block}
+
+ Il est possible d'observer une telle différence sous $H_0$ mais avec une probabilité faible (\Sexpr{round(test.bil$p.value,4)}).
+
+\begin{block}{Décision statistique}
+ On décide de réfuter $H_0$ avec un risque de le réfuter à tort de \Sexpr{round(test.bil$p.value*100,2)}\%. Ce risque est nommé risque de première espèce.
+ \end{block}
+
+\begin{block}{Conclusion biologique}
+ Les femelles et les mâles chacals n'ont pas la même mesure cranienne
+ \end{block}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Conclusion du test unilatère}
+\begin{block}{Probabilité critique}
+ $\Pbb(T <\Sexpr{tobs})= \Sexpr{test.uni$p.value}$
+ Il est possible d'observer une telle différence sous $H_0$ mais avec une probabilité faible (\Sexpr{round(test.uni$p.value,4)}).
+\end{block}
+
+\begin{block}{Décision statistique}
+ On décide de réfuter $H_0$ avec un risque de le réfuter à tort de \Sexpr{round(test.uni$p.value*100,2)}\%. Ce risque est nommé risque de première espèce.
+ \end{block}
+
+\begin{block}{Conclusion biologique}
+ Les femelles ont des dimensions craniennes plus petites que les mâles
+ \end{block}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{frame}[fragile]{Risques du test}
+
+\begin{tabular}{p{0.45\textwidth}p{0.5\textwidth}}
+\begin{tabular}{|c|cc|}\hline
+ Décision & \multicolumn{2}{c|}{Vérité} \\
+  & $H_0$ & $H_1$ \\ \hline
+$H_0$ & $\textcolor{darkgreen}{1-\alpha}$ & $\textcolor{red}{\alpha}$\\ \hline
+$H_1$ & $\textcolor{red}{\beta}$ & $\textcolor{darkgreen}{1-\beta}$ \\ \hline
+\end{tabular} &
+\begin{itemize}
+\item $\alpha$ est le risque de première espèce,
+\item $\beta$ est le risque de deuxième espèce,
+\item $1- \beta$ est la puissance du test.
+\end{itemize}
+\end{tabular}
+\end{frame}
+
+
+
+\begin{frame}[fragile]{Test bilatère : mise en oeuvre sous R}
+<<>>=
+test.bil <- t.test(taille~sexe, data=chacals)
+print(test.bil)
+@
+\end{frame}
+
+\begin{frame}[fragile]{Test unilatère : mise en oeuvre sous R}
+<<>>=
+test.uni <- t.test(taille~sexe, data=chacals, alternative =  "less" )
+print(test.uni)
+@
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Modèle linéaire}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Extension de la méthode de comparaison de deux populations}
+On s'intéresse à un trait quantitatif  $Y$, mesuré sur un échantillon de taille $n$ et on souhaite tester des facteurs d'influence sur ce trait.
+\only<2>{
+  \begin{block}{Exemple 1 : Parasitisme des oeufs chez le coucou}
+  {\bf Question :} Le coucou adapte t il la taille de ses oeufs à son hôte ? \\ 
+  {\bf Expérience :} On a relevé pour 6 espèces hotes différentes victimes du parasitisme de nichée, la taille de l'oeuf de coucou qui y avait été déposé. Au total $n=120$ observations.  \\
+  \end{block}
+ }
+\only<3>{
+  \begin{block}{Exemple 2 : Bio Accumulation du DDT chez le brochet}
+  {\bf Question :} Le DDT s'accumule t il au cours du temps ? \\
+  {\bf Expérience :} On a mesuré chez 15 brochets agés de 2 à 6 ans, le taux de DDT présent.  \\
+  \end{block}
+}
+
+\only<4>{
+  \begin{block}{Exemple 3 : Temps de sommeil chez les mammifères}
+  {\bf Question :} Quels sont les variables expliquant les temps de sommeil très variables chez les mammifères ? \\
+  {\bf Expérience :}  On a relevé pour 62 espèces de mammifères, le temps de sommeil moyen ainsi que des sources de variation possibles (Poids moyen du corps, du cerveau, tempds de gestation, etc ...) \\
+  \end{block}
+}
+
+\only<5>{
+  \begin{block}{Exemple 4 : Comparaison de la relation Hauteur diamètre en fonction de l'espèce chez deux espèces de pins.}
+  {\bf Question :} La relation  Diamètre Hauteur est-elle la même chez les pins jaunes et les pins blancs ? \\
+  {\bf Expérience :} On a étudié 39 pins jaunes ou blancs, pour lesquels on a noté leur diamètre et leur hauteur.  \\
+  \end{block}
+}
+
+\end{frame}
+
+\subsection{Modélisation}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Modèles}
+Notons $Y_k$ le trait d'intérêt pour l'individu $k$, dans tous les exemples on va proposer le modèle
+$$Y_{\only<3,9>{\textcolor{darkorange}{i}}k}\overset{i.i.d}{\sim}\Ncal(\mu_{\only<3>{\textcolor{darkorange}{i}}k}, \sigma^2)$$
+
+\only<2-3>{
+  \begin{block}{Exemple 1 : Parasitisme des oeufs chez le coucou}
+  $$\mu_{\only<3>{\textcolor{darkorange}{i}}k}= \mu + \only<2>{\sum_{i=1}^6 \1_{\ll esp_k==i \rr }} \alpha_i\quad \hfill \only<3>{\textcolor{darkorange}{\mbox{Anova}}}$$
+  \end{block}
+}
+\only<4-5>{
+  \begin{block}{Exemple 2 : Bio Accumulation du DDT chez le brochet}
+  $$\mu_{k}= \mu + \beta_1 x_k \quad \hfill \only<5>{\textcolor{darkorange}{\mbox{Regression}}}$$
+  \end{block}
+}
+
+\only<6-7>{
+  \begin{block}{Exemple 3 : Temps de sommeil chez les mammifères}
+    $$\mu_{k}= \mu + \sum_{\ell=1}^p \beta_{\ell} x_k^{\ell} \quad \hfill \only<7>{\textcolor{darkorange}{\mbox{Regression multiple}}}$$
+  \end{block}
+}
+
+\only<8-9>{
+  \begin{block}{Exemple 4 : Comparaison de la relation Hauteur diamètre en fonction de l'espèce chez deux espèces de pins.}
+      $$\mu_{\only<9>{\textcolor{darkorange}{i}}k}= \mu +  \only<8>{\sum_{i=1}^6 \1_{\ll esp_k==i \rr }}  \alpha_i + \beta x_{\only<9>{\textcolor{darkorange}{i}}k}  + \only<8>{\sum_{i=1}^6 \1_{\ll esp_k==i \rr }}  \gamma_i  x_{\only<9>{\textcolor{darkorange}{i}}k} \quad \hfill \only<9>{\textcolor{darkorange}{\mbox{Ancova}}}$$
+ 
+  \end{block}
+}
+
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Modèles - Version matricielle}
+Notons $\Ybf=(Y_1, Y_2, \ldots, Y_n)$ le vecteur contenant l'ensemble des réponses.
+
+$$\Ybf \sim \Ncal\left( \bmu, \sigma^2 {\boldsymbol{I}}\right)$$
+\pause
+
+$$\bmu = \Xbf \theta$$
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Estimation}
+\begin{frame}[fragile]{Maximum de vraisemblance}
+$$\ell(\theta, \Ybf) = -0.5 \ln{2\pi} -0.5  \ln{\sigma^2} -\frac{|| Y - \Xbf \theta||^2}{\sigma^2}$$
+
+\end{frame}
+
+
+% \section{Modèle linéaire généralisé}
+% \section{Statistique Bayésienne}
+% \section{Analyse en composantes principales}
+
+\end{document}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]
+  \frametitle{}
+\end{frame}
